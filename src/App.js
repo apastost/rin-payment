@@ -165,7 +165,7 @@ export default function App() {
     // ค้นจาก Supabase ก่อน
     const d = roomData.find(r => r.zone === tZone && String(r.room) === String(tRoom));
     // ค้นจาก Google Sheets (Zone = "ป้าริน" หรือ "ป้าหลวย")
-    const zoneLabel = tZone === "rin" ? "ป้าริน" : "ป้าหลวย";
+    const zoneLabel = tZone === "rin" ? "ริน" : "หลวย";
     const s = sheetData.find(r => r["Zone"] === zoneLabel && String(r["ห้อง"]) === String(tRoom));
     if (d || s) {
       setTData(d || null);
