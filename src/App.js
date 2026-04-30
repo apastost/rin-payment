@@ -1,64 +1,21 @@
 import { useState, useEffect, useRef } from "react";
 import { supabase } from "./supabase";
 
-// ---- PromptPay QR generator (EMV QR standard - corrected) ----
-function crc16ccitt(str) {
-  let crc = 0xFFFF;
-  for (let i = 0; i < str.length; i++) {
-    crc ^= str.charCodeAt(i) << 8;
-    for (let j = 0; j < 8; j++) {
-      crc = (crc & 0x8000) ? ((crc << 1) ^ 0x1021) : (crc << 1);
-    }
-  }
-  return ((crc & 0xFFFF).toString(16).toUpperCase().padStart(4, '0'));
+// ---- PromptPay QR — ใช้ promptpay.io (รับรองโดยธนาคารไทย) ----
+function getPromptPayQRUrl(phone, amount, size = 240) {
+  const clean = phone.replace(/\D/g, '');
+  return `https://promptpay.io/${clean}/${amount}.png?s=${size}`;
 }
 
-function tlv(tag, value) {
-  return tag + value.length.toString().padStart(2, '0') + value;
-}
-
-function generatePromptPayQR(phone, amount) {
-  // Normalize phone: 08x -> 668x
-  const digits = phone.replace(/\D/g, '');
-  const normalized = digits.startsWith('0') ? '66' + digits.slice(1) : digits;
-
-  const merchantAcct = tlv('00', 'A000000677010111') + tlv('01', normalized);
-  
-  const payload = [
-    tlv('00', '01'),                          // Payload Format Indicator
-    tlv('01', '11'),                          // Point of Initiation (static=11, dynamic=12) - use 11 for fixed QR
-    tlv('29', merchantAcct),                  // Merchant Account (PromptPay)
-    tlv('53', '764'),                         // Transaction Currency (THB)
-    amount ? tlv('54', amount.toFixed(2)) : '',// Transaction Amount
-    tlv('58', 'TH'),                          // Country Code
-    tlv('59', 'NA'),                          // Merchant Name
-    tlv('60', 'Bangkok'),                     // Merchant City
-    '6304',                                   // CRC placeholder
-  ].join('');
-
-  return payload + crc16ccitt(payload);
-}
-
-function QRCode({ data, size = 220 }) {
-  const [src, setSrc] = useState("");
+function QRCode({ phone, amount, size = 240 }) {
   const [error, setError] = useState(false);
-
-  useEffect(() => {
-    setError(false);
-    setSrc(`https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&data=${encodeURIComponent(data)}&format=svg&margin=10&ecc=M`);
-  }, [data, size]);
-
+  const src = getPromptPayQRUrl(phone, amount, size);
   if (error) return (
     <div style={{ width: size, height: size, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, color: "#999", textAlign: "center", padding: 16 }}>
       ไม่สามารถโหลด QR ได้<br/>กรุณาลองใหม่
     </div>
   );
-
-  return src ? (
-    <img src={src} width={size} height={size} alt="QR PromptPay" style={{ display: "block" }} onError={() => setError(true)} />
-  ) : (
-    <div style={{ width: size, height: size, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, color: "#999" }}>กำลังโหลด...</div>
-  );
+  return <img src={src} width={size} height={size} alt="QR PromptPay" style={{ display: "block" }} onError={() => setError(true)} />;
 }
 
 // ---- Config ----
@@ -170,7 +127,6 @@ export default function App() {
 
   // ===== TENANT =====
   if (page === "tenant") {
-    const qrData = tData ? generatePromptPayQR(PROMPTPAY, tData.amount) : null;
     return (
       <div style={S.app}>
         <div style={S.header}>
@@ -210,7 +166,7 @@ export default function App() {
             {tErr && <div style={S.err}>{tErr.split("\n").map((l,i) => <div key={i}>{l}</div>)}</div>}
           </div>
 
-          {tData && qrData && (
+          {tData && (
             <div style={S.card}>
               <div style={{ textAlign:"center", marginBottom:14 }}>
                 <span style={S.badge}>{ZONES[tData.zone].label} ห้อง {tData.room}</span>
@@ -222,7 +178,7 @@ export default function App() {
                 <div style={{ fontSize:42, fontWeight:800, color:C.accent }}>฿{Number(tData.amount).toLocaleString()}</div>
 
                 <div style={{ background:"#FFF", padding:14, borderRadius:18, boxShadow:"0 2px 24px rgba(0,0,0,0.12)", border:`3px solid ${C.accent}` }}>
-                  <QRCode data={qrData} size={240}/>
+                  <QRCode phone={PROMPTPAY} amount={Number(tData.amount)} size={240}/>
                 </div>
 
                 <div style={{ fontSize:14, color:C.mid, textAlign:"center", lineHeight:2 }}>
