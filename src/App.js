@@ -71,7 +71,7 @@ const S = {
   totalRow: { display:"flex", justifyContent:"space-between", alignItems:"center", fontSize:20, fontWeight:800, color:C.dark, marginTop:4, padding:"12px 0", borderTop:`2px solid ${C.accent}` },
 };
 
-// ---- รายการค่าใช้จ่าย (key = หัวตารางภาษาไทยใน Google Sheets) ----
+// ---- รายการค่าใช้จ่าย (key ต้องตรงกับหัวตารางใน Google Sheets เป๊ะๆ) ----
 const EXPENSE_LABELS = {
   "ค่าห้อง":   { label: "ค่าห้อง",   icon: "🏠" },
   "ค่าไฟ":     { label: "ค่าไฟฟ้า",  icon: "⚡" },
@@ -166,7 +166,7 @@ export default function App() {
     const d = roomData.find(r => r.zone === tZone && String(r.room) === String(tRoom));
     // ค้นจาก Google Sheets (Zone = "ป้าริน" หรือ "ป้าหลวย")
     const zoneLabel = tZone === "rin" ? "ริน" : "หลวย";
-    const s = sheetData.find(r => r["Zone"] === zoneLabel && String(r["ห้อง"]) === String(tRoom));
+    const s = sheetData.find(r => r["โซน"] === zoneLabel && String(r["ห้อง"]) === String(tRoom));
     if (d || s) {
       setTData(d || null);
       setTSheet(s || null);
