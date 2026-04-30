@@ -19,7 +19,7 @@ function QRCode({ phone, amount, size = 240 }) {
 }
 
 // ---- Google Sheets fetch ----
-const SHEET_ID = "1jMBLSfOUN3y9n6FhEjD4omAScJItNNByWCNDqPaVvYE";
+const SHEET_ID = "15ktYmmHn_7oPsulpi9cu8R1JoSYoS6mTKIzjg5VWpEg";
 const SHEET_NAME = "WebData";
 
 async function fetchSheetData() {
@@ -30,15 +30,37 @@ async function fetchSheetData() {
     r.split(/,(?=(?:[^"]*"[^"]*")*[^"]*$)/).map(c => c.replace(/^"|"$/g, "").trim())
   );
   if (rows.length < 2) return [];
-  const headers = rows[0].map(h => h.toLowerCase());
-  return rows.slice(1).map(row => {
+  const headers = rows[0]; // ใช้ภาษาไทยตรงๆ ไม่ lowercase
+  return rows.slice(1).filter(row => row.some(c => c !== "")).map(row => {
     const obj = {};
     headers.forEach((h, i) => { obj[h] = row[i] || ""; });
     return obj;
   });
 }
 
-// ---- Config ----
+// ---- Line Notify ----
+const LINE_TOKEN = "vAiPcfUQQZXZ64SY2qt3w6h+4nwwOpL/vNR6ILFYul7Xu52AzMGCrhmU/PlT1z2GoF1D+JVGrtsJrQTcUAtB0LidTQU4kkM6UUTrEWuURrycDmDSZN8dsrFmuULH9C/NucvUrCg0sAaAY2dP7CrpkgdB04t89/1O/w1cDnyilFU=";
+const LINE_USER_ID = "Ue60d152d2b4fb9073904896bd0096b7a";
+const WEB_URL = "https://rin-payment-zqpc.vercel.app";
+
+async function sendLineMessage(message) {
+  try {
+    await fetch("https://api.line.me/v2/bot/message/push", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${LINE_TOKEN}`,
+      },
+      body: JSON.stringify({
+        to: LINE_USER_ID,
+        messages: [{ type: "text", text: message }],
+      }),
+    });
+    return true;
+  } catch(e) {
+    return false;
+  }
+}
 const PROMPTPAY    = "0860529870";
 const ADMIN_SECRET = "345027";
 const ZONES = {
@@ -153,7 +175,31 @@ export default function App() {
     await loadRooms();
   }
 
-  // tenant
+  const [lineSending, setLineSending] = useState(false);
+  const [lineSent,    setLineSent]    = useState("");
+  const [lineErr,     setLineErr]     = useState("");
+
+  async function doSendBill(zone, room, amount, month) {
+    setLineSending(true); setLineSent(""); setLineErr("");
+    const zoneLabel = ZONES[zone].label;
+    const link = `${WEB_URL}`;
+    const msg =
+`🏠 ริน ห้องเช่า — แจ้งยอดค่าเช่า
+━━━━━━━━━━━━━━━
+📌 ${zoneLabel} ห้อง ${room}
+📅 เดือน: ${month}
+💰 ยอดที่ต้องชำระ: ฿${Number(amount).toLocaleString()}
+━━━━━━━━━━━━━━━
+🔗 กดลิงก์เพื่อชำระเงิน:
+${link}
+
+(เลือกโซน "${zoneLabel}" แล้วกรอกห้อง ${room})`;
+
+    const ok = await sendLineMessage(msg);
+    if (ok) { setLineSent(`ส่งบิลห้อง ${room} สำเร็จ!`); setTimeout(() => setLineSent(""), 3000); }
+    else setLineErr("ส่ง Line ไม่สำเร็จ กรุณาลองใหม่");
+    setLineSending(false);
+  }
   const [tZone, setTZone] = useState("rin");
   const [tRoom, setTRoom] = useState("");
   const [tData, setTData] = useState(null);   // from Supabase (ยอดรวม)
