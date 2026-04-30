@@ -65,7 +65,7 @@ const PROMPTPAY    = "0860529870";
 const ADMIN_SECRET = "345027";
 const ZONES = {
   rin:  { label: "ห้องป้าริน",   rooms: [2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,101,102,103] },
-  luay: { label: "ห้องป้าหลวย", rooms: [1,2,3,4,5,6,7,8,9,10,11,12,13] },
+  luay: { label: "ห้องป้าหลวย", rooms: ["บ้าน",1,2,3,4,5,6,7,8,9,10,11,12] },
 };
 
 // ---- Design tokens (ตัวใหญ่ขึ้น เหมาะคนแก่) ----
@@ -212,7 +212,7 @@ ${link}
     const d = roomData.find(r => r.zone === tZone && String(r.room) === String(tRoom));
     // ค้นจาก Google Sheets (Zone = "ป้าริน" หรือ "ป้าหลวย")
     const zoneLabel = tZone === "rin" ? "ริน" : "หลวย";
-    const s = sheetData.find(r => r["โซน"] === zoneLabel && String(r["ห้อง"]) === String(tRoom));
+    const s = sheetData.find(r => r["Zone"] === zoneLabel && String(r["ห้อง"]) === String(tRoom));
     if (d || s) {
       setTData(d || null);
       setTSheet(s || null);
@@ -377,16 +377,55 @@ ${link}
 
   // ===== ADMIN =====
   if (page === "admin") {
-    const saved = [...roomData].sort((a,b) => {
-      if (a.zone !== b.zone) return a.zone==="rin" ? -1 : 1;
-      return parseInt(a.room) - parseInt(b.room);
-    });
+    const rinData  = sheetData.filter(r => r["Zone"] === "ริน");
+    const luayData = sheetData.filter(r => r["Zone"] === "หลวย");
+
+    const TableSection = ({ title, data, bgColor }) => (
+      <div style={S.card}>
+        <div style={{ ...S.cTitle, display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+          <span>{title} ({data.length} ห้อง)</span>
+        </div>
+        {data.length === 0 ? (
+          <div style={{ fontSize:14, color:"#999", textAlign:"center", padding:16 }}>ไม่มีข้อมูล</div>
+        ) : (
+          <div style={{ overflowX:"auto" }}>
+            <table style={{ width:"100%", borderCollapse:"collapse", fontSize:13 }}>
+              <thead>
+                <tr style={{ background:C.dark, color:C.accent }}>
+                  {["ห้อง","เดือน","ค่าห้อง","ค่าไฟ","ค่าน้ำ","ที่จอดรถ","ค่าขยะ","รวม"].map(h => (
+                    <th key={h} style={{ padding:"8px 10px", textAlign:"center", whiteSpace:"nowrap", fontWeight:700 }}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {data.map((r, i) => {
+                  const total = parseFloat(r["รวม"]) || 0;
+                  return (
+                    <tr key={i} style={{ background: i%2===0 ? bgColor : "#FFFFFF" }}>
+                      <td style={{ padding:"8px 10px", textAlign:"center", fontWeight:700 }}>{r["ห้อง"]}</td>
+                      <td style={{ padding:"8px 10px", textAlign:"center", color:"#888", fontSize:12 }}>{r["เดือน"]}</td>
+                      <td style={{ padding:"8px 10px", textAlign:"right" }}>{Number(r["ค่าห้อง"]||0).toLocaleString()}</td>
+                      <td style={{ padding:"8px 10px", textAlign:"right" }}>{Number(r["ค่าไฟ"]||0).toLocaleString()}</td>
+                      <td style={{ padding:"8px 10px", textAlign:"right" }}>{Number(r["ค่าน้ำ"]||0).toLocaleString()}</td>
+                      <td style={{ padding:"8px 10px", textAlign:"right" }}>{Number(r["ที่จอดรถ"]||0).toLocaleString()}</td>
+                      <td style={{ padding:"8px 10px", textAlign:"right" }}>{Number(r["ค่าขยะ"]||0).toLocaleString()}</td>
+                      <td style={{ padding:"8px 10px", textAlign:"right", fontWeight:800, color:C.accent }}>฿{total.toLocaleString()}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    );
+
     return (
       <div style={S.app}>
         <div style={S.header}>
           <div>
             <div style={S.hTitle}>🏠 ริน ห้องเช่า</div>
-            <div style={S.hSub}>จัดการยอดค่าเช่า</div>
+            <div style={S.hSub}>หน้า Admin — ดูยอดทุกห้อง</div>
           </div>
           <button style={S.backBtn} onClick={() => setPage("tenant")}>← ออก</button>
         </div>
@@ -405,63 +444,21 @@ ${link}
                 🔄 รีโหลด
               </button>
             </div>
+            {sheetErr && <div style={{ ...S.err, marginTop:10 }}>⚠️ {sheetErr}</div>}
           </div>
 
-          <div style={S.card}>
-            <div style={S.cTitle}>➕ กรอกยอดรวม (Backup)</div>
-            <div style={{ fontSize:13, color:"#999", marginBottom:14, lineHeight:1.6 }}>
-              ใช้เมื่อต้องการกำหนดยอดรวมเองโดยไม่ผ่าน Sheets
-            </div>
+          {/* ตารางห้องป้าริน */}
+          {!sheetLoading && <TableSection title="🏠 ห้องป้าริน" data={rinData} bgColor="F0F6FF" />}
 
-            <label style={S.label}>โซนห้อง</label>
-            <div style={S.tabRow}>
-              {Object.entries(ZONES).map(([k,z]) => (
-                <button key={k} style={S.tab(aZone===k)} onClick={() => { setAZone(k); setARoom(""); }}>
-                  {z.label}
-                </button>
-              ))}
-            </div>
+          {/* ตารางห้องป้าหลวย */}
+          {!sheetLoading && <TableSection title="🏠 ห้องป้าหลวย" data={luayData} bgColor="F0FFF4" />}
 
-            <label style={S.label}>เลขห้อง</label>
-            <input type="text" inputMode="numeric"
-              placeholder={`เช่น ${ZONES[aZone].rooms.slice(0,3).join(", ")}...`}
-              value={aRoom} onChange={e => setARoom(e.target.value)} style={S.input}/>
-
-            <label style={S.label}>ยอดรวม (บาท)</label>
-            <input type="number" inputMode="decimal" placeholder="เช่น 2500"
-              value={aAmt} onChange={e => setAAmt(e.target.value)} style={S.input}/>
-
-            <label style={S.label}>เดือน</label>
-            <input type="text" placeholder={defMonth}
-              value={aMonth} onChange={e => setAMonth(e.target.value)} style={S.input}/>
-
-            <button style={S.btn} onClick={doSave}>💾 บันทึก</button>
-            {aSaved && <div style={S.ok}>✅ บันทึกเรียบร้อย</div>}
-            {aErr   && <div style={S.err}>{aErr}</div>}
-          </div>
-
-          {saved.length > 0 && (
-            <div style={S.card}>
-              <div style={S.cTitle}>📋 ยอดที่บันทึกไว้ ({saved.length} ห้อง)</div>
-              <div style={{ maxHeight:320, overflowY:"auto" }}>
-                {saved.map((r,i) => (
-                  <div key={i} style={{ display:"flex", alignItems:"center", justifyContent:"space-between", borderBottom:`1px solid ${C.accentLight}`, paddingBottom:12, marginBottom:12 }}>
-                    <div>
-                      <span style={{ fontWeight:700, fontSize:16 }}>{ZONES[r.zone].label} ห้อง {r.room}</span>
-                      <span style={{ fontSize:13, color:"#999", marginLeft:8 }}>{r.month}</span>
-                    </div>
-                    <div style={{ display:"flex", alignItems:"center", gap:12 }}>
-                      <span style={{ fontWeight:700, color:C.accent, fontSize:16 }}>฿{Number(r.amount).toLocaleString()}</span>
-                      <button onClick={() => doDelete(r.zone, r.room)}
-                        style={{ background:"none", border:"1px solid #FFCDD2", color:"#E53935", borderRadius:8, padding:"4px 12px", fontSize:13, cursor:"pointer" }}>
-                        ลบ
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
+          {sheetLoading && (
+            <div style={{ ...S.card, textAlign:"center", padding:32 }}>
+              <div style={{ fontSize:16, color:"#999" }}>⏳ กำลังโหลดข้อมูลจาก Google Sheets...</div>
             </div>
           )}
+
         </div>
       </div>
     );
