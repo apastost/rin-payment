@@ -184,7 +184,7 @@ export default function App() {
     const zoneLabel = ZONES[zone].label;
     const link = `${WEB_URL}`;
     const msg =
-`🏠 ริน ห้องเช่า — แจ้งยอดค่าเช่า
+`🏠 ป้าริน ห้องเช่า — แจ้งยอดค่าเช่า
 ━━━━━━━━━━━━━━━
 📌 ${zoneLabel} ห้อง ${room}
 📅 เดือน: ${month}
@@ -242,7 +242,7 @@ ${link}
       <div style={S.app}>
         <div style={S.header}>
           <div onClick={handleLogoTap} style={{ cursor:"default" }}>
-            <div style={S.hTitle}>🏠 ริน ห้องเช่า</div>
+            <div style={S.hTitle}>🏠 ป้าริน ห้องเช่า</div>
             <div style={S.hSub}>
               ชำระค่าเช่า
               {tapHint >= 2 && <span style={{ marginLeft:8, fontSize:12, color:"#666" }}>({5-tapHint} ครั้ง)</span>}
@@ -331,7 +331,7 @@ ${link}
                 </div>
                 <div style={{ background:C.accentLight, borderRadius:14, padding:"14px 20px", fontSize:16, color:C.mid, width:"100%", boxSizing:"border-box" }}>
                   <div style={S.row}><span>PromptPay</span><span style={{fontWeight:700}}>{PROMPTPAY}</span></div>
-                  <div style={S.row}><span>ชื่อบัญชี</span><span style={{fontWeight:700}}>ริน ห้องเช่า</span></div>
+                  <div style={S.row}><span>ชื่อบัญชี</span><span style={{fontWeight:700}}>ป้าริน ห้องเช่า</span></div>
                   <div style={S.row}><span>ยอดเงิน</span><span style={{fontWeight:800, color:C.accent, fontSize:18}}>฿{displayAmount.toLocaleString()}</span></div>
                 </div>
                 <div style={{ background:"#FFF9E6", border:"1px solid #FFE082", borderRadius:14, padding:"14px 20px", fontSize:15, color:"#7B5800", width:"100%", boxSizing:"border-box", lineHeight:2 }}>
@@ -351,7 +351,7 @@ ${link}
       <div style={S.app}>
         <div style={S.header}>
           <div>
-            <div style={S.hTitle}>🏠 ริน ห้องเช่า</div>
+            <div style={S.hTitle}>🏠 ป้าริน ห้องเช่า</div>
             <div style={S.hSub}>เข้าสู่ระบบผู้ดูแล</div>
           </div>
           <button style={S.backBtn} onClick={() => { setPage("tenant"); setSecret(""); setSecErr(false); }}>← กลับ</button>
@@ -424,7 +424,7 @@ ${link}
       <div style={S.app}>
         <div style={S.header}>
           <div>
-            <div style={S.hTitle}>🏠 ริน ห้องเช่า</div>
+            <div style={S.hTitle}>🏠 ป้าริน ห้องเช่า</div>
             <div style={S.hSub}>หน้า Admin — ดูยอดทุกห้อง</div>
           </div>
           <button style={S.backBtn} onClick={() => setPage("tenant")}>← ออก</button>
