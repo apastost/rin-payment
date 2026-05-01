@@ -23,23 +23,29 @@ const SHEET_ID = "15ktYmmHn_7oPsulpi9cu8R1JoSYoS6mTKIzjg5VWpEg";
 const SHEET_NAME = "WebData";
 
 async function fetchSheetData() {
-  // ใช้ gviz/tq JSON แทน CSV เพื่อหลีกเลี่ยงปัญหา encoding ภาษาไทย
   const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(SHEET_NAME)}`;
   const res = await fetch(url);
   const text = await res.text();
-  // gviz ส่งมาเป็น /*O_o*/\ngoogle.visualization.Query.setResponse({...});
   const json = JSON.parse(text.match(/google\.visualization\.Query\.setResponse\(([\s\S]*)\)/)[1]);
   const table = json.table;
   if (!table || !table.rows) return [];
 
-  const headers = table.cols.map(c => c.label || c.id);
+  // แมปหัวตารางตามลำดับคอลัมน์ (A=Zone, B=ห้อง, C=เดือน, D=ค่าห้อง, E=ค่าไฟ, F=ค่าน้ำ, G=ที่จอดรถ, H=ค่าขยะ, I=รวม)
+  const COL_KEYS = ["Zone","ห้อง","เดือน","ค่าห้อง","ค่าไฟ","ค่าน้ำ","ที่จอดรถ","ค่าขยะ","รวม"];
+
   return table.rows
-    .filter(row => row.c && row.c.some(c => c && c.v != null))
+    .filter(row => row.c && row.c[0] && row.c[0].v)
     .map(row => {
       const obj = {};
-      headers.forEach((h, i) => {
+      COL_KEYS.forEach((key, i) => {
         const cell = row.c[i];
-        obj[h] = cell && cell.v != null ? String(cell.v) : "";
+        if (!cell || cell.v == null) { obj[key] = ""; return; }
+        // จัดการ Date format
+        if (typeof cell.v === "string" && cell.v.startsWith("Date(")) {
+          obj[key] = cell.f || cell.v; // ใช้ formatted value ถ้ามี
+        } else {
+          obj[key] = cell.f != null ? String(cell.f) : String(cell.v);
+        }
       });
       return obj;
     });
