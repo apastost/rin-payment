@@ -23,19 +23,26 @@ const SHEET_ID = "15ktYmmHn_7oPsulpi9cu8R1JoSYoS6mTKIzjg5VWpEg";
 const SHEET_NAME = "WebData";
 
 async function fetchSheetData() {
-  const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(SHEET_NAME)}`;
+  // ใช้ gviz/tq JSON แทน CSV เพื่อหลีกเลี่ยงปัญหา encoding ภาษาไทย
+  const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(SHEET_NAME)}`;
   const res = await fetch(url);
   const text = await res.text();
-  const rows = text.trim().split("\n").map(r =>
-    r.split(/,(?=(?:[^"]*"[^"]*")*[^"]*$)/).map(c => c.replace(/^"|"$/g, "").trim())
-  );
-  if (rows.length < 2) return [];
-  const headers = rows[0]; // ใช้ภาษาไทยตรงๆ ไม่ lowercase
-  return rows.slice(1).filter(row => row.some(c => c !== "")).map(row => {
-    const obj = {};
-    headers.forEach((h, i) => { obj[h] = row[i] || ""; });
-    return obj;
-  });
+  // gviz ส่งมาเป็น /*O_o*/\ngoogle.visualization.Query.setResponse({...});
+  const json = JSON.parse(text.match(/google\.visualization\.Query\.setResponse\(([\s\S]*)\)/)[1]);
+  const table = json.table;
+  if (!table || !table.rows) return [];
+
+  const headers = table.cols.map(c => c.label || c.id);
+  return table.rows
+    .filter(row => row.c && row.c.some(c => c && c.v != null))
+    .map(row => {
+      const obj = {};
+      headers.forEach((h, i) => {
+        const cell = row.c[i];
+        obj[h] = cell && cell.v != null ? String(cell.v) : "";
+      });
+      return obj;
+    });
 }
 
 // ---- Line Notify ----
