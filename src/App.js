@@ -280,7 +280,7 @@ ${link}
 
             <label style={S.label}>เลขห้องของคุณ</label>
             <input
-              type="text" inputMode="numeric"
+              type="text" inputMode={tZone === "luay" ? "text" : "numeric"}
               placeholder={`เช่น ${ZONES[tZone].rooms.slice(0,3).join(", ")}...`}
               value={tRoom}
               onChange={e => { setTRoom(e.target.value); setTData(null); setTSheet(null); setTErr(""); }}
