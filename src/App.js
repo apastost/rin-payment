@@ -249,8 +249,113 @@ ${link}
   const displayAmount = tData?.amount || (tSheet?.["รวม"] ? parseFloat(tSheet["รวม"]) : null);
   const displayMonth  = tData?.month || tSheet?.["เดือน"] || defMonth;
 
-  // ===== ZONE SELECT =====
-  if (page === "zoneSelect") {
+  // ===== TENANT (หน้าเดียว 2 โซน) =====
+  if (page === "zoneSelect" || page === "tenant") {
+
+    const ZoneCard = ({ zoneKey }) => {
+      const [room, setRoom]   = useState("");
+      const [data, setData]   = useState(null);
+      const [sheet, setSheet] = useState(null);
+      const [err, setErr]     = useState("");
+
+      const zone = ZONES[zoneKey];
+      const isBlue  = zoneKey === "rin";
+      const hdColor = isBlue ? "#1565C0" : "#2E7D32";
+
+      function search() {
+        if (!room) return;
+        const zoneLabel = zoneKey === "rin" ? "ริน" : "หลวย";
+        const d = roomData.find(r => r.zone === zoneKey && String(r.room) === String(room));
+        const s = sheetData.find(r => r["Zone"] === zoneLabel && String(r["ห้อง"]) === String(room));
+        if (d || s) { setData(d||null); setSheet(s||null); setErr(""); }
+        else { setData(null); setSheet(null); setErr("ยังไม่มียอดห้องนี้\nกรุณาติดต่อเจ้าของหอพัก"); }
+      }
+
+      const amt   = data?.amount || (sheet?.["รวม"] ? parseFloat(sheet["รวม"]) : null);
+      const month = data?.month  || sheet?.["เดือน"] || defMonth;
+
+      return (
+        <div style={{ ...S.card, padding:0, overflow:"hidden" }}>
+          {/* หัวการ์ด */}
+          <div style={{ background:hdColor, padding:"14px 18px" }}>
+            <div style={{ color:"#FFF", fontWeight:800, fontSize:18 }}>🏠 {zone.label}</div>
+          </div>
+
+          <div style={{ padding:"16px 18px" }}>
+            <label style={S.label}>เลขห้องของคุณ</label>
+            <input
+              type="text"
+              inputMode={zoneKey === "luay" ? "text" : "numeric"}
+              placeholder={`เช่น ${zone.rooms.slice(0,3).join(", ")}...`}
+              value={room}
+              onChange={e => { setRoom(e.target.value); setData(null); setSheet(null); setErr(""); }}
+              onKeyDown={e => e.key==="Enter" && search()}
+              style={S.input}
+            />
+            <button
+              style={{ ...S.btn, background:`linear-gradient(135deg,${hdColor},${isBlue?"#0D47A1":"#1B5E20"})`, boxShadow:`0 4px 14px ${isBlue?"rgba(21,101,192,0.4)":"rgba(46,125,50,0.4)"}` }}
+              onClick={search}>
+              🔍 ดูยอดค่าเช่า
+            </button>
+            {err && <div style={S.err}>{err.split("\n").map((l,i)=><div key={i}>{l}</div>)}</div>}
+          </div>
+
+          {/* ผลลัพธ์ */}
+          {(data || sheet) && amt && (
+            <div style={{ padding:"0 18px 18px" }}>
+              <div style={S.divider}/>
+              <div style={{ textAlign:"center", marginBottom:12 }}>
+                <span style={{ ...S.badge, background:hdColor }}>{zone.label} ห้อง {room}</span>
+                <div style={{ marginTop:8, fontSize:13, color:C.mid }}>{month}</div>
+              </div>
+
+              {sheet && (
+                <div style={{ marginBottom:8 }}>
+                  {Object.entries(EXPENSE_LABELS).map(([key, { label, icon }]) => {
+                    const val = parseFloat(sheet[key]);
+                    if (!val || val === 0) return null;
+                    return (
+                      <div key={key} style={S.rowBorder}>
+                        <span style={{ fontSize:16 }}>{icon} {label}</span>
+                        <span style={{ fontWeight:600, fontSize:16 }}>฿{val.toLocaleString()}</span>
+                      </div>
+                    );
+                  })}
+                  <div style={S.totalRow}>
+                    <span>💰 ยอดรวม</span>
+                    <span style={{ color:C.accent }}>฿{amt.toLocaleString()}</span>
+                  </div>
+                </div>
+              )}
+
+              {!sheet && (
+                <div style={{ textAlign:"center", marginBottom:12 }}>
+                  <div style={{ fontSize:13, color:C.mid }}>ยอดที่ต้องชำระ</div>
+                  <div style={{ fontSize:38, fontWeight:800, color:C.accent }}>฿{amt.toLocaleString()}</div>
+                </div>
+              )}
+
+              <div style={S.divider}/>
+              <div style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:12 }}>
+                <div style={{ fontSize:15, color:C.mid, fontWeight:600 }}>สแกน QR เพื่อชำระเงิน</div>
+                <div style={{ background:"#FFF", padding:12, borderRadius:16, boxShadow:"0 2px 20px rgba(0,0,0,0.12)", border:`3px solid ${C.accent}` }}>
+                  <QRCode phone={PROMPTPAY} amount={amt} size={220}/>
+                </div>
+                <div style={{ background:C.accentLight, borderRadius:12, padding:"12px 16px", fontSize:15, color:C.mid, width:"100%", boxSizing:"border-box" }}>
+                  <div style={S.row}><span>PromptPay</span><span style={{fontWeight:700}}>{PROMPTPAY}</span></div>
+                  <div style={S.row}><span>ชื่อบัญชี</span><span style={{fontWeight:700}}>ป้าริน ห้องเช่า</span></div>
+                  <div style={S.row}><span>ยอดเงิน</span><span style={{fontWeight:800, color:C.accent, fontSize:17}}>฿{amt.toLocaleString()}</span></div>
+                </div>
+                <div style={{ background:"#FFF9E6", border:"1px solid #FFE082", borderRadius:12, padding:"12px 16px", fontSize:14, color:"#7B5800", width:"100%", boxSizing:"border-box", lineHeight:1.8 }}>
+                  ⚠️ ตรวจสอบชื่อและยอดก่อนชำระทุกครั้ง
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    };
+
     return (
       <div style={S.app}>
         <div style={S.header}>
@@ -263,121 +368,11 @@ ${link}
           </div>
           {sheetLoading && <span style={{ color:"#888", fontSize:13 }}>กำลังโหลด...</span>}
         </div>
-        <div style={S.wrap}>
-          <div style={{ ...S.card, textAlign:"center", padding:"28px 20px" }}>
-            <div style={{ fontSize:18, fontWeight:700, color:C.mid, marginBottom:24 }}>
-              คุณอยู่โซนไหน?
-            </div>
-            <div style={{ display:"flex", flexDirection:"column", gap:16 }}>
-              <button
-                style={{ ...S.btn, padding:22, fontSize:20, borderRadius:16, background:`linear-gradient(135deg,#1565C0,#0D47A1)`, boxShadow:"0 4px 14px rgba(21,101,192,0.4)" }}
-                onClick={() => { setTZone("rin"); setPage("tenant"); setTData(null); setTSheet(null); setTErr(""); setTRoom(""); }}>
-                🏠 ห้องป้าริน
-              </button>
-              <button
-                style={{ ...S.btn, padding:22, fontSize:20, borderRadius:16, background:`linear-gradient(135deg,#2E7D32,#1B5E20)`, boxShadow:"0 4px 14px rgba(46,125,50,0.4)" }}
-                onClick={() => { setTZone("luay"); setPage("tenant"); setTData(null); setTSheet(null); setTErr(""); setTRoom(""); }}>
-                🏠 ห้องป้าหลวย
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // ===== TENANT =====
-  if (page === "tenant") {
-    return (
-      <div style={S.app}>
-        <div style={S.header}>
-          <div onClick={handleLogoTap} style={{ cursor:"default" }}>
-            <div style={S.hTitle}>🏠 ป้าริน ห้องเช่า</div>
-            <div style={S.hSub}>
-              {ZONES[tZone].label}
-              {tapHint >= 2 && <span style={{ marginLeft:8, fontSize:12, color:"#666" }}>({5-tapHint} ครั้ง)</span>}
-            </div>
-          </div>
-          <button style={S.backBtn} onClick={() => { setPage("zoneSelect"); setTData(null); setTSheet(null); setTErr(""); setTRoom(""); }}>← กลับ</button>
-        </div>
 
         <div style={S.wrap}>
-          <div style={S.card}>
-            <div style={S.cTitle}>🔍 {ZONES[tZone].label}</div>
-            <input
-              type="text" inputMode={tZone === "luay" ? "text" : "numeric"}
-              placeholder={`เช่น ${ZONES[tZone].rooms.slice(0,3).join(", ")}...`}
-              value={tRoom}
-              onChange={e => { setTRoom(e.target.value); setTData(null); setTSheet(null); setTErr(""); }}
-              onKeyDown={e => e.key==="Enter" && doSearch()}
-              style={S.input}
-            />
-            <button style={S.btn} onClick={doSearch}>🔍 ดูยอดค่าเช่า</button>
-            {sheetErr && <div style={S.err}>⚠️ {sheetErr} <button onClick={loadSheet} style={{ marginLeft:8, background:"none", border:"none", color:"#C62828", textDecoration:"underline", cursor:"pointer", fontSize:15 }}>ลองใหม่</button></div>}
-            {tErr && <div style={S.err}>{tErr.split("\n").map((l,i) => <div key={i}>{l}</div>)}</div>}
-          </div>
-
-          {(tData || tSheet) && displayAmount && (
-            <div style={S.card}>
-              {/* Header */}
-              <div style={{ textAlign:"center", marginBottom:16 }}>
-                <span style={S.badge}>{ZONES[tZone].label} ห้อง {tRoom}</span>
-                <div style={{ marginTop:10, fontSize:15, color:C.mid }}>{displayMonth}</div>
-              </div>
-
-              <div style={S.divider}/>
-
-              {/* รายละเอียดค่าใช้จ่าย */}
-              {tSheet && (
-                <div style={{ marginBottom:8 }}>
-                  <div style={{ fontSize:16, fontWeight:700, color:C.mid, marginBottom:12 }}>📋 รายละเอียด</div>
-                  {Object.entries(EXPENSE_LABELS).map(([key, { label, icon }]) => {
-                    const val = parseFloat(tSheet[key]);
-                    if (!val || val === 0) return null;
-                    return (
-                      <div key={key} style={S.rowBorder}>
-                        <span style={{ fontSize:17 }}>{icon} {label}</span>
-                        <span style={{ fontWeight:600, fontSize:17 }}>฿{val.toLocaleString()}</span>
-                      </div>
-                    );
-                  })}
-                  <div style={S.totalRow}>
-                    <span>💰 ยอดรวมทั้งหมด</span>
-                    <span style={{ color:C.accent }}>฿{displayAmount.toLocaleString()}</span>
-                  </div>
-                </div>
-              )}
-
-              {/* ถ้าไม่มีข้อมูล Sheets แสดงแค่ยอดรวม */}
-              {!tSheet && (
-                <div style={{ textAlign:"center", marginBottom:16 }}>
-                  <div style={{ fontSize:15, color:C.mid }}>ยอดที่ต้องชำระ</div>
-                  <div style={{ fontSize:44, fontWeight:800, color:C.accent, marginTop:4 }}>฿{displayAmount.toLocaleString()}</div>
-                </div>
-              )}
-
-              <div style={S.divider}/>
-
-              {/* QR */}
-              <div style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:16 }}>
-                <div style={{ fontSize:16, color:C.mid, fontWeight:600 }}>สแกน QR เพื่อชำระเงิน</div>
-                <div style={{ background:"#FFF", padding:14, borderRadius:18, boxShadow:"0 2px 24px rgba(0,0,0,0.12)", border:`3px solid ${C.accent}` }}>
-                  <QRCode phone={PROMPTPAY} amount={displayAmount} size={240}/>
-                </div>
-                <div style={{ fontSize:15, color:C.mid, textAlign:"center", lineHeight:2 }}>
-                  📱 สแกนด้วยแอปธนาคารทุกธนาคาร
-                </div>
-                <div style={{ background:C.accentLight, borderRadius:14, padding:"14px 20px", fontSize:16, color:C.mid, width:"100%", boxSizing:"border-box" }}>
-                  <div style={S.row}><span>PromptPay</span><span style={{fontWeight:700}}>{PROMPTPAY}</span></div>
-                  <div style={S.row}><span>ชื่อบัญชี</span><span style={{fontWeight:700}}>ป้าริน ห้องเช่า</span></div>
-                  <div style={S.row}><span>ยอดเงิน</span><span style={{fontWeight:800, color:C.accent, fontSize:18}}>฿{displayAmount.toLocaleString()}</span></div>
-                </div>
-                <div style={{ background:"#FFF9E6", border:"1px solid #FFE082", borderRadius:14, padding:"14px 20px", fontSize:15, color:"#7B5800", width:"100%", boxSizing:"border-box", lineHeight:2 }}>
-                  ⚠️ กรุณาตรวจสอบชื่อบัญชีและยอดเงิน<br/>ก่อนกดยืนยันการชำระเงินทุกครั้ง
-                </div>
-              </div>
-            </div>
-          )}
+          {sheetErr && <div style={S.err}>⚠️ {sheetErr} <button onClick={loadSheet} style={{ marginLeft:8, background:"none", border:"none", color:"#C62828", textDecoration:"underline", cursor:"pointer" }}>ลองใหม่</button></div>}
+          <ZoneCard zoneKey="rin" />
+          <ZoneCard zoneKey="luay" />
         </div>
       </div>
     );
