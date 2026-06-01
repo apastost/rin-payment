@@ -116,7 +116,7 @@ const EXPENSE_LABELS = {
 };
 
 export default function App() {
-  const [page, setPage]             = useState("tenant");
+  const [page, setPage]             = useState("zoneSelect");
   const [sheetData, setSheetData]   = useState([]);
   const [sheetLoading, setSheetLoading] = useState(false);
   const [sheetErr, setSheetErr]     = useState("");
@@ -249,8 +249,8 @@ ${link}
   const displayAmount = tData?.amount || (tSheet?.["รวม"] ? parseFloat(tSheet["รวม"]) : null);
   const displayMonth  = tData?.month || tSheet?.["เดือน"] || defMonth;
 
-  // ===== TENANT =====
-  if (page === "tenant") {
+  // ===== ZONE SELECT =====
+  if (page === "zoneSelect") {
     return (
       <div style={S.app}>
         <div style={S.header}>
@@ -263,22 +263,47 @@ ${link}
           </div>
           {sheetLoading && <span style={{ color:"#888", fontSize:13 }}>กำลังโหลด...</span>}
         </div>
+        <div style={S.wrap}>
+          <div style={{ ...S.card, textAlign:"center", padding:"28px 20px" }}>
+            <div style={{ fontSize:18, fontWeight:700, color:C.mid, marginBottom:24 }}>
+              คุณอยู่โซนไหน?
+            </div>
+            <div style={{ display:"flex", flexDirection:"column", gap:16 }}>
+              <button
+                style={{ ...S.btn, padding:22, fontSize:20, borderRadius:16, background:`linear-gradient(135deg,#1565C0,#0D47A1)`, boxShadow:"0 4px 14px rgba(21,101,192,0.4)" }}
+                onClick={() => { setTZone("rin"); setPage("tenant"); setTData(null); setTSheet(null); setTErr(""); setTRoom(""); }}>
+                🏠 ห้องป้าริน
+              </button>
+              <button
+                style={{ ...S.btn, padding:22, fontSize:20, borderRadius:16, background:`linear-gradient(135deg,#2E7D32,#1B5E20)`, boxShadow:"0 4px 14px rgba(46,125,50,0.4)" }}
+                onClick={() => { setTZone("luay"); setPage("tenant"); setTData(null); setTSheet(null); setTErr(""); setTRoom(""); }}>
+                🏠 ห้องป้าหลวย
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ===== TENANT =====
+  if (page === "tenant") {
+    return (
+      <div style={S.app}>
+        <div style={S.header}>
+          <div onClick={handleLogoTap} style={{ cursor:"default" }}>
+            <div style={S.hTitle}>🏠 ป้าริน ห้องเช่า</div>
+            <div style={S.hSub}>
+              {ZONES[tZone].label}
+              {tapHint >= 2 && <span style={{ marginLeft:8, fontSize:12, color:"#666" }}>({5-tapHint} ครั้ง)</span>}
+            </div>
+          </div>
+          <button style={S.backBtn} onClick={() => { setPage("zoneSelect"); setTData(null); setTSheet(null); setTErr(""); setTRoom(""); }}>← กลับ</button>
+        </div>
 
         <div style={S.wrap}>
           <div style={S.card}>
-            <div style={S.cTitle}>🔍 ค้นหายอดค่าเช่า</div>
-
-            <label style={S.label}>โซนห้อง</label>
-            <div style={S.tabRow}>
-              {Object.entries(ZONES).map(([k,z]) => (
-                <button key={k} style={S.tab(tZone===k)}
-                  onClick={() => { setTZone(k); setTData(null); setTSheet(null); setTErr(""); setTRoom(""); }}>
-                  {z.label}
-                </button>
-              ))}
-            </div>
-
-            <label style={S.label}>เลขห้องของคุณ</label>
+            <div style={S.cTitle}>🔍 {ZONES[tZone].label}</div>
             <input
               type="text" inputMode={tZone === "luay" ? "text" : "numeric"}
               placeholder={`เช่น ${ZONES[tZone].rooms.slice(0,3).join(", ")}...`}
