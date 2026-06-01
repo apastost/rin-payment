@@ -18,9 +18,8 @@ function tlv(tag, value) {
 }
 
 function makePromptPayPayload(phone, amount) {
-  const digits = phone.replace(/\D/g, '');
-  const norm = digits.startsWith('0') ? '66' + digits.slice(1) : digits;
-  const merchant = tlv('00', 'A000000677010111') + tlv('01', norm);
+  const digits = phone.replace(/\D/g, ''); // ใช้เบอร์ดิบ ไม่แปลง
+  const merchant = tlv('00', 'A000000677010111') + tlv('01', digits);
   const amtStr = parseFloat(amount).toFixed(2);
   const body =
     tlv('00', '01') +
