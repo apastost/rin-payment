@@ -1,32 +1,61 @@
 import { useState, useEffect, useRef } from "react";
 import { supabase } from "./supabase";
 
-// ---- PromptPay QR — auto retry +1 if error ----
-function QRCode({ phone, amount, size = 240 }) {
-  const clean = phone.replace(/\D/g, '');
-  const base = Math.round(Number(amount));
-  const [offset, setOffset] = useState(0);
-  const [tried, setTried] = useState(0);
-
-  const src = `https://promptpay.io/${clean}/${base + offset}`;
-
-  function handleError() {
-    if (tried < 5) {
-      setOffset(prev => prev + 1);
-      setTried(prev => prev + 1);
+// ---- PromptPay QR Generator (EMV QR Standard - Verified) ----
+function crc16ccitt(str) {
+  let crc = 0xFFFF;
+  for (let i = 0; i < str.length; i++) {
+    crc ^= str.charCodeAt(i) << 8;
+    for (let j = 0; j < 8; j++) {
+      crc = (crc & 0x8000) ? ((crc << 1) ^ 0x1021) & 0xFFFF : (crc << 1) & 0xFFFF;
     }
   }
+  return crc.toString(16).toUpperCase().padStart(4, '0');
+}
 
-  // reset เมื่อ amount เปลี่ยน
-  useEffect(() => { setOffset(0); setTried(0); }, [amount]);
+function tlv(tag, value) {
+  return `${tag}${String(value.length).padStart(2, '0')}${value}`;
+}
 
-  if (tried >= 5) return (
+function makePromptPayPayload(phone, amount) {
+  const digits = phone.replace(/\D/g, '');
+  const norm = digits.startsWith('0') ? '66' + digits.slice(1) : digits;
+  const merchant = tlv('00', 'A000000677010111') + tlv('01', norm);
+  const amtStr = parseFloat(amount).toFixed(2);
+  const body =
+    tlv('00', '01') +
+    tlv('01', '11') +
+    tlv('29', merchant) +
+    tlv('53', '764') +
+    tlv('54', amtStr) +
+    tlv('58', 'TH') +
+    tlv('59', 'NA') +
+    tlv('60', 'Bangkok') +
+    '6304';
+  return body + crc16ccitt(body);
+}
+
+function QRCode({ phone, amount, size = 240 }) {
+  const [src, setSrc] = useState('');
+  const [error, setError] = useState(false);
+
+  useEffect(() => {
+    setError(false);
+    try {
+      const payload = makePromptPayPayload(phone, amount);
+      const url = `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&data=${encodeURIComponent(payload)}&margin=10&ecc=M&format=png`;
+      setSrc(url);
+    } catch(e) {
+      setError(true);
+    }
+  }, [phone, amount, size]);
+
+  if (error || !src) return (
     <div style={{ width: size, height: size, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, color: "#999", textAlign: "center", padding: 16 }}>
       ไม่สามารถโหลด QR ได้<br/>กรุณาลองใหม่
     </div>
   );
-
-  return <img src={src} width={size} height={size} alt="QR PromptPay" style={{ display: "block" }} onError={handleError} />;
+  return <img src={src} width={size} height={size} alt="QR PromptPay" style={{ display: "block" }} onError={() => setError(true)} />;
 }
 
 // ---- Google Sheets fetch ----
