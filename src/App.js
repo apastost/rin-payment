@@ -2,14 +2,15 @@ import { useState, useEffect, useRef } from "react";
 import { supabase } from "./supabase";
 
 // ---- PromptPay QR ----
-function getPromptPayQRUrl(phone, amount, size = 240) {
+function getPromptPayQRUrl(phone, amount) {
   const clean = phone.replace(/\D/g, '');
-  return `https://promptpay.io/${clean}/${amount}.png?s=${size}`;
+  return `https://promptpay.io/${clean}/${amount}`;
 }
 
 function QRCode({ phone, amount, size = 240 }) {
   const [error, setError] = useState(false);
-  const src = getPromptPayQRUrl(phone, amount, size);
+  // ใช้ format เดียวกับ https://promptpay.io/0860529870/100
+  const src = getPromptPayQRUrl(phone, amount);
   if (error) return (
     <div style={{ width: size, height: size, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, color: "#999", textAlign: "center", padding: 16 }}>
       ไม่สามารถโหลด QR ได้<br/>กรุณาลองใหม่
