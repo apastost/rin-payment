@@ -259,8 +259,6 @@ ${link}
       const [err, setErr]     = useState("");
 
       const zone = ZONES[zoneKey];
-      const isBlue  = zoneKey === "rin";
-      const hdColor = isBlue ? "#1565C0" : "#2E7D32";
 
       function search() {
         if (!room) return;
@@ -275,38 +273,38 @@ ${link}
       const month = data?.month  || sheet?.["เดือน"] || defMonth;
 
       return (
-        <div style={{ ...S.card, padding:0, overflow:"hidden" }}>
-          {/* หัวการ์ด */}
-          <div style={{ background:hdColor, padding:"14px 18px" }}>
-            <div style={{ color:"#FFF", fontWeight:800, fontSize:18 }}>🏠 {zone.label}</div>
+        <div style={{ ...S.card, padding:0, overflow:"hidden", flex:1 }}>
+          {/* หัวการ์ด — สีทองเหมือนเดิม */}
+          <div style={{ background:C.dark, padding:"12px 14px" }}>
+            <div style={{ color:C.accent, fontWeight:800, fontSize:16 }}>🏠 {zone.label}</div>
           </div>
 
-          <div style={{ padding:"16px 18px" }}>
-            <label style={S.label}>เลขห้องของคุณ</label>
+          <div style={{ padding:"14px 14px" }}>
+            <label style={{ ...S.label, fontSize:12 }}>เลขห้อง</label>
             <input
               type="text"
               inputMode={zoneKey === "luay" ? "text" : "numeric"}
-              placeholder={`เช่น ${zone.rooms.slice(0,3).join(", ")}...`}
+              placeholder={zone.rooms.slice(0,2).join(", ")}
               value={room}
               onChange={e => { setRoom(e.target.value); setData(null); setSheet(null); setErr(""); }}
               onKeyDown={e => e.key==="Enter" && search()}
-              style={S.input}
+              style={{ ...S.input, fontSize:16, marginBottom:10 }}
             />
             <button
-              style={{ ...S.btn, background:`linear-gradient(135deg,${hdColor},${isBlue?"#0D47A1":"#1B5E20"})`, boxShadow:`0 4px 14px ${isBlue?"rgba(21,101,192,0.4)":"rgba(46,125,50,0.4)"}` }}
+              style={{ ...S.btn, fontSize:14, padding:12 }}
               onClick={search}>
-              🔍 ดูยอดค่าเช่า
+              🔍 ดูยอด
             </button>
-            {err && <div style={S.err}>{err.split("\n").map((l,i)=><div key={i}>{l}</div>)}</div>}
+            {err && <div style={{ ...S.err, fontSize:12, marginTop:8 }}>{err.split("\n").map((l,i)=><div key={i}>{l}</div>)}</div>}
           </div>
 
           {/* ผลลัพธ์ */}
           {(data || sheet) && amt && (
-            <div style={{ padding:"0 18px 18px" }}>
+            <div style={{ padding:"0 14px 14px" }}>
               <div style={S.divider}/>
-              <div style={{ textAlign:"center", marginBottom:12 }}>
-                <span style={{ ...S.badge, background:hdColor }}>{zone.label} ห้อง {room}</span>
-                <div style={{ marginTop:8, fontSize:13, color:C.mid }}>{month}</div>
+              <div style={{ textAlign:"center", marginBottom:10 }}>
+                <span style={{ ...S.badge, fontSize:13, padding:"6px 14px" }}>{zone.label} ห้อง {room}</span>
+                <div style={{ marginTop:6, fontSize:12, color:C.mid }}>{month}</div>
               </div>
 
               {sheet && (
@@ -315,38 +313,38 @@ ${link}
                     const val = parseFloat(sheet[key]);
                     if (!val || val === 0) return null;
                     return (
-                      <div key={key} style={S.rowBorder}>
-                        <span style={{ fontSize:16 }}>{icon} {label}</span>
-                        <span style={{ fontWeight:600, fontSize:16 }}>฿{val.toLocaleString()}</span>
+                      <div key={key} style={{ ...S.rowBorder, fontSize:13 }}>
+                        <span>{icon} {label}</span>
+                        <span style={{ fontWeight:600 }}>฿{val.toLocaleString()}</span>
                       </div>
                     );
                   })}
-                  <div style={S.totalRow}>
-                    <span>💰 ยอดรวม</span>
+                  <div style={{ ...S.totalRow, fontSize:15 }}>
+                    <span>💰 รวม</span>
                     <span style={{ color:C.accent }}>฿{amt.toLocaleString()}</span>
                   </div>
                 </div>
               )}
 
               {!sheet && (
-                <div style={{ textAlign:"center", marginBottom:12 }}>
-                  <div style={{ fontSize:13, color:C.mid }}>ยอดที่ต้องชำระ</div>
-                  <div style={{ fontSize:38, fontWeight:800, color:C.accent }}>฿{amt.toLocaleString()}</div>
+                <div style={{ textAlign:"center", marginBottom:10 }}>
+                  <div style={{ fontSize:12, color:C.mid }}>ยอดที่ต้องชำระ</div>
+                  <div style={{ fontSize:28, fontWeight:800, color:C.accent }}>฿{amt.toLocaleString()}</div>
                 </div>
               )}
 
               <div style={S.divider}/>
-              <div style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:12 }}>
-                <div style={{ fontSize:15, color:C.mid, fontWeight:600 }}>สแกน QR เพื่อชำระเงิน</div>
-                <div style={{ background:"#FFF", padding:12, borderRadius:16, boxShadow:"0 2px 20px rgba(0,0,0,0.12)", border:`3px solid ${C.accent}` }}>
-                  <QRCode phone={PROMPTPAY} amount={amt} size={220}/>
+              <div style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:10 }}>
+                <div style={{ fontSize:13, color:C.mid, fontWeight:600 }}>สแกน QR ชำระเงิน</div>
+                <div style={{ background:"#FFF", padding:8, borderRadius:14, boxShadow:"0 2px 16px rgba(0,0,0,0.12)", border:`2px solid ${C.accent}` }}>
+                  <QRCode phone={PROMPTPAY} amount={amt} size={160}/>
                 </div>
-                <div style={{ background:C.accentLight, borderRadius:12, padding:"12px 16px", fontSize:15, color:C.mid, width:"100%", boxSizing:"border-box" }}>
-                  <div style={S.row}><span>PromptPay</span><span style={{fontWeight:700}}>{PROMPTPAY}</span></div>
-                  <div style={S.row}><span>ชื่อบัญชี</span><span style={{fontWeight:700}}>ป้าริน ห้องเช่า</span></div>
-                  <div style={S.row}><span>ยอดเงิน</span><span style={{fontWeight:800, color:C.accent, fontSize:17}}>฿{amt.toLocaleString()}</span></div>
+                <div style={{ background:C.accentLight, borderRadius:10, padding:"10px 12px", fontSize:12, color:C.mid, width:"100%", boxSizing:"border-box" }}>
+                  <div style={{ display:"flex", justifyContent:"space-between", marginBottom:4 }}><span>PromptPay</span><span style={{fontWeight:700}}>{PROMPTPAY}</span></div>
+                  <div style={{ display:"flex", justifyContent:"space-between", marginBottom:4 }}><span>ชื่อบัญชี</span><span style={{fontWeight:700}}>ป้าริน ห้องเช่า</span></div>
+                  <div style={{ display:"flex", justifyContent:"space-between" }}><span>ยอดเงิน</span><span style={{fontWeight:800, color:C.accent, fontSize:14}}>฿{amt.toLocaleString()}</span></div>
                 </div>
-                <div style={{ background:"#FFF9E6", border:"1px solid #FFE082", borderRadius:12, padding:"12px 16px", fontSize:14, color:"#7B5800", width:"100%", boxSizing:"border-box", lineHeight:1.8 }}>
+                <div style={{ background:"#FFF9E6", border:"1px solid #FFE082", borderRadius:10, padding:"8px 12px", fontSize:12, color:"#7B5800", width:"100%", boxSizing:"border-box" }}>
                   ⚠️ ตรวจสอบชื่อและยอดก่อนชำระทุกครั้ง
                 </div>
               </div>
@@ -369,10 +367,13 @@ ${link}
           {sheetLoading && <span style={{ color:"#888", fontSize:13 }}>กำลังโหลด...</span>}
         </div>
 
-        <div style={S.wrap}>
-          {sheetErr && <div style={S.err}>⚠️ {sheetErr} <button onClick={loadSheet} style={{ marginLeft:8, background:"none", border:"none", color:"#C62828", textDecoration:"underline", cursor:"pointer" }}>ลองใหม่</button></div>}
-          <ZoneCard zoneKey="rin" />
-          <ZoneCard zoneKey="luay" />
+        <div style={{ ...S.wrap, padding:"16px 12px" }}>
+          {sheetErr && <div style={S.err}>⚠️ {sheetErr}</div>}
+          {/* 2 การ์ดซ้าย-ขวา */}
+          <div style={{ display:"flex", gap:12, alignItems:"flex-start" }}>
+            <ZoneCard zoneKey="rin" />
+            <ZoneCard zoneKey="luay" />
+          </div>
         </div>
       </div>
     );
