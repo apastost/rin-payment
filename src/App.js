@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef } from "react";
-import { supabase } from "./supabase";
 
 // ---- PromptPay QR Generator (EMV QR Standard - Verified) ----
 function crc16ccitt(str) {
@@ -70,7 +69,7 @@ async function fetchSheetData() {
   if (!table || !table.rows) return [];
 
   // แมปหัวตารางตามลำดับคอลัมน์ (A=Zone, B=ห้อง, C=เดือน, D=ค่าห้อง, E=ค่าไฟ, F=ค่าน้ำ, G=ที่จอดรถ, H=ค่าขยะ, I=รวม)
-  const COL_KEYS = ["Zone","ห้อง","เดือน","ค่าห้อง","ค่าไฟ","ค่าน้ำ","ที่จอดรถ","ค่าขยะ","รวม"];
+  const COL_KEYS = ["Zone","ห้อง","เดือน","ค่าห้อง","ค่าไฟ","ค่าน้ำ","ที่จอดรถ","ค่าขยะ","รวม","เบอร์"];
 
   return table.rows
     .filter(row => row.c && row.c[0] && row.c[0].v)
@@ -194,39 +193,6 @@ export default function App() {
   const [secret, setSecret] = useState("");
   const [secErr, setSecErr] = useState(false);
 
-  // admin form (Supabase — เก็บยอดรวม)
-  const [aZone,  setAZone]  = useState("rin");
-  const [aRoom,  setARoom]  = useState("");
-  const [aAmt,   setAAmt]   = useState("");
-  const [aMonth, setAMonth] = useState("");
-  const [aSaved, setASaved] = useState(false);
-  const [aErr,   setAErr]   = useState("");
-  const [roomData, setRoomData] = useState([]);
-
-  async function loadRooms() {
-    const { data } = await supabase.from("room_payments").select("*");
-    if (data) setRoomData(data);
-  }
-  useEffect(() => { loadRooms(); }, []);
-
-  async function doSave() {
-    if (!aRoom || !aAmt) return;
-    setAErr(""); setASaved(false);
-    const { error } = await supabase.from("room_payments").upsert(
-      { zone: aZone, room: aRoom, amount: parseFloat(aAmt), month: aMonth || defMonth },
-      { onConflict: "zone,room" }
-    );
-    if (error) { setAErr("เกิดข้อผิดพลาด: " + error.message); return; }
-    setASaved(true); setTimeout(() => setASaved(false), 2500);
-    setARoom(""); setAAmt("");
-    await loadRooms();
-  }
-
-  async function doDelete(zone, room) {
-    await supabase.from("room_payments").delete().eq("zone", zone).eq("room", room);
-    await loadRooms();
-  }
-
   const [lineSending, setLineSending] = useState(false);
   const [lineSent,    setLineSent]    = useState("");
   const [lineErr,     setLineErr]     = useState("");
@@ -254,20 +220,15 @@ ${link}
   }
   const [tZone, setTZone] = useState("rin");
   const [tRoom, setTRoom] = useState("");
-  const [tData, setTData] = useState(null);   // from Supabase (ยอดรวม)
-  const [tSheet, setTSheet] = useState(null); // from Google Sheets (รายละเอียด)
+  const [tSheet, setTSheet] = useState(null);
   const [tErr,  setTErr]  = useState("");
 
   function doSearch() {
     if (!tRoom) return;
-    // ค้นจาก Supabase ก่อน
-    const d = roomData.find(r => r.zone === tZone && String(r.room) === String(tRoom));
-    // ค้นจาก Google Sheets (Zone = "ป้าริน" หรือ "ป้าหลวย")
     const zoneLabel = tZone === "rin" ? "ริน" : "หลวย";
     const s = sheetData.find(r => r["Zone"] === zoneLabel && String(r["ห้อง"]) === String(tRoom));
-    if (d || s) {
-      setTData(d || null);
-      setTSheet(s || null);
+    if (s) {
+      setTSheet(s);
       setTErr("");
     } else {
       setTData(null); setTSheet(null);
@@ -285,35 +246,47 @@ ${link}
   const defMonth = `${thaiMonths[now.getMonth()]} ${now.getFullYear()+543}`;
 
   // ยอดรวมและรายละเอียด
-  const displayAmount = tData?.amount || (tSheet?.["รวม"] ? parseFloat(tSheet["รวม"]) : null);
-  const displayMonth  = tData?.month || tSheet?.["เดือน"] || defMonth;
+  const displayAmount = tSheet?.["รวม"] ? parseFloat(tSheet["รวม"]) : null;
+  const displayMonth  = tSheet?.["เดือน"] || defMonth;
 
   // ===== TENANT (หน้าเดียว 2 โซน) =====
   if (page === "zoneSelect" || page === "tenant") {
 
     const ZoneCard = ({ zoneKey }) => {
       const [room, setRoom]   = useState("");
-      const [data, setData]   = useState(null);
+      const [phone, setPhone] = useState("");
       const [sheet, setSheet] = useState(null);
       const [err, setErr]     = useState("");
 
       const zone = ZONES[zoneKey];
 
       function search() {
-        if (!room) return;
+        if (!room) { setErr("กรุณาใส่เลขห้อง"); return; }
+        if (!phone) { setErr("กรุณาใส่เบอร์โทร"); return; }
+
         const zoneLabel = zoneKey === "rin" ? "ริน" : "หลวย";
-        const d = roomData.find(r => r.zone === zoneKey && String(r.room) === String(room));
         const s = sheetData.find(r => r["Zone"] === zoneLabel && String(r["ห้อง"]) === String(room));
-        if (d || s) { setData(d||null); setSheet(s||null); setErr(""); }
-        else { setData(null); setSheet(null); setErr("ยังไม่มียอดห้องนี้\nกรุณาติดต่อเจ้าของหอพัก"); }
+
+        if (!s) { setSheet(null); setErr("ยังไม่มียอดห้องนี้\nกรุณาติดต่อเจ้าของหอพัก"); return; }
+
+        // เช็คเบอร์โทร
+        const storedPhones = s["เบอร์"] || "";
+        if (!storedPhones) {
+          setSheet(null); setErr("ยังไม่ได้ลงทะเบียนเบอร์\nกรุณาติดต่อเจ้าของหอพัก"); return;
+        }
+        const cleanInput = phone.replace(/\D/g, '');
+        const phoneList = storedPhones.split(',').map(p => p.replace(/\D/g, '').trim());
+        const matched = phoneList.some(p => p === cleanInput);
+        if (!matched) { setSheet(null); setErr("เบอร์โทรไม่ถูกต้อง\nกรุณาตรวจสอบและลองใหม่"); return; }
+
+        setSheet(s); setErr("");
       }
 
-      const amt   = data?.amount || (sheet?.["รวม"] ? parseFloat(sheet["รวม"]) : null);
-      const month = data?.month  || sheet?.["เดือน"] || defMonth;
+      const amt   = sheet?.["รวม"] ? parseFloat(sheet["รวม"]) : null;
+      const month = sheet?.["เดือน"] || defMonth;
 
       return (
         <div style={{ ...S.card, padding:0, overflow:"hidden", flex:1 }}>
-          {/* หัวการ์ด — สีทองเหมือนเดิม */}
           <div style={{ background:C.dark, padding:"12px 14px" }}>
             <div style={{ color:C.accent, fontWeight:800, fontSize:16 }}>🏠 {zone.label}</div>
           </div>
@@ -325,7 +298,17 @@ ${link}
               inputMode={zoneKey === "luay" ? "text" : "numeric"}
               placeholder={zone.rooms.slice(0,2).join(", ")}
               value={room}
-              onChange={e => { setRoom(e.target.value); setData(null); setSheet(null); setErr(""); }}
+              onChange={e => { setRoom(e.target.value); setSheet(null); setErr(""); }}
+              onKeyDown={e => e.key==="Enter" && search()}
+              style={{ ...S.input, fontSize:16, marginBottom:10 }}
+            />
+            <label style={{ ...S.label, fontSize:12 }}>เบอร์โทรของคุณ</label>
+            <input
+              type="tel"
+              inputMode="numeric"
+              placeholder="0812345678"
+              value={phone}
+              onChange={e => { setPhone(e.target.value); setSheet(null); setErr(""); }}
               onKeyDown={e => e.key==="Enter" && search()}
               style={{ ...S.input, fontSize:16, marginBottom:10 }}
             />
@@ -337,8 +320,7 @@ ${link}
             {err && <div style={{ ...S.err, fontSize:12, marginTop:8 }}>{err.split("\n").map((l,i)=><div key={i}>{l}</div>)}</div>}
           </div>
 
-          {/* ผลลัพธ์ */}
-          {(data || sheet) && amt && (
+          {sheet && amt && (
             <div style={{ padding:"0 14px 14px" }}>
               <div style={S.divider}/>
               <div style={{ textAlign:"center", marginBottom:10 }}>
@@ -346,31 +328,22 @@ ${link}
                 <div style={{ marginTop:6, fontSize:12, color:C.mid }}>{month}</div>
               </div>
 
-              {sheet && (
-                <div style={{ marginBottom:8 }}>
-                  {Object.entries(EXPENSE_LABELS).map(([key, { label, icon }]) => {
-                    const val = parseFloat(sheet[key]);
-                    if (!val || val === 0) return null;
-                    return (
-                      <div key={key} style={{ ...S.rowBorder, fontSize:13 }}>
-                        <span>{icon} {label}</span>
-                        <span style={{ fontWeight:600 }}>฿{val.toLocaleString()}</span>
-                      </div>
-                    );
-                  })}
-                  <div style={{ ...S.totalRow, fontSize:15 }}>
-                    <span>💰 รวม</span>
-                    <span style={{ color:C.accent }}>฿{amt.toLocaleString()}</span>
-                  </div>
+              <div style={{ marginBottom:8 }}>
+                {Object.entries(EXPENSE_LABELS).map(([key, { label, icon }]) => {
+                  const val = parseFloat(sheet[key]);
+                  if (!val || val === 0) return null;
+                  return (
+                    <div key={key} style={{ ...S.rowBorder, fontSize:13 }}>
+                      <span>{icon} {label}</span>
+                      <span style={{ fontWeight:600 }}>฿{val.toLocaleString()}</span>
+                    </div>
+                  );
+                })}
+                <div style={{ ...S.totalRow, fontSize:15 }}>
+                  <span>💰 รวม</span>
+                  <span style={{ color:C.accent }}>฿{amt.toLocaleString()}</span>
                 </div>
-              )}
-
-              {!sheet && (
-                <div style={{ textAlign:"center", marginBottom:10 }}>
-                  <div style={{ fontSize:12, color:C.mid }}>ยอดที่ต้องชำระ</div>
-                  <div style={{ fontSize:28, fontWeight:800, color:C.accent }}>฿{amt.toLocaleString()}</div>
-                </div>
-              )}
+              </div>
 
               <div style={S.divider}/>
               <div style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:10 }}>
@@ -383,8 +356,9 @@ ${link}
                   <div style={{ display:"flex", justifyContent:"space-between", marginBottom:4 }}><span>ชื่อบัญชี</span><span style={{fontWeight:700}}>ป้าริน ห้องเช่า</span></div>
                   <div style={{ display:"flex", justifyContent:"space-between" }}><span>ยอดเงิน</span><span style={{fontWeight:800, color:C.accent, fontSize:14}}>฿{amt.toLocaleString()}</span></div>
                 </div>
-                <div style={{ background:"#FFF9E6", border:"1px solid #FFE082", borderRadius:10, padding:"8px 12px", fontSize:12, color:"#7B5800", width:"100%", boxSizing:"border-box" }}>
-                  ⚠️ ตรวจสอบชื่อและยอดก่อนชำระทุกครั้ง
+                {/* หมายเหตุ QR สีแดง */}
+                <div style={{ background:"#FFEBEE", border:"0.5px solid #EF9595", borderRadius:10, padding:"8px 12px", fontSize:12, color:"#A32D2D", width:"100%", boxSizing:"border-box", lineHeight:1.6 }}>
+                  ❌ ถ้าสแกน QR ไม่ได้ ให้โอนผ่าน PromptPay เบอร์ <strong>{PROMPTPAY}</strong> แล้วใส่ยอด <strong>฿{amt.toLocaleString()}</strong>
                 </div>
               </div>
             </div>
