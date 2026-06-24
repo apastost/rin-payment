@@ -353,7 +353,7 @@ ${link}
                 </div>
                 <div style={{ background:C.accentLight, borderRadius:10, padding:"10px 12px", fontSize:12, color:C.mid, width:"100%", boxSizing:"border-box" }}>
                   <div style={{ display:"flex", justifyContent:"space-between", marginBottom:4 }}><span>PromptPay</span><span style={{fontWeight:700}}>{PROMPTPAY}</span></div>
-                  <div style={{ display:"flex", justifyContent:"space-between", marginBottom:4 }}><span>ชื่อบัญชี</span><span style={{fontWeight:700}}>ป้าริน ห้องเช่า</span></div>
+                  <div style={{ display:"flex", justifyContent:"space-between", marginBottom:4 }}><span>ชื่อบัญชี</span><span style={{fontWeight:700}}>บุญยืน กำจัด</span></div>
                   <div style={{ display:"flex", justifyContent:"space-between" }}><span>ยอดเงิน</span><span style={{fontWeight:800, color:C.accent, fontSize:14}}>฿{amt.toLocaleString()}</span></div>
                 </div>
                 {/* หมายเหตุ QR สีแดง */}
