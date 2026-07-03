@@ -69,7 +69,7 @@ async function fetchSheetData() {
   if (!table || !table.rows) return [];
 
   // แมปหัวตารางตามลำดับคอลัมน์ (A=Zone, B=ห้อง, C=เดือน, D=ค่าห้อง, E=ค่าไฟ, F=ค่าน้ำ, G=ที่จอดรถ, H=ค่าขยะ, I=รวม)
-  const COL_KEYS = ["Zone","ห้อง","เดือน","ค่าห้อง","ค่าไฟ","ค่าน้ำ","ที่จอดรถ","ค่าขยะ","รวม","เบอร์"];
+  const COL_KEYS = ["Zone","ห้อง","เดือน","ค่าห้อง","มิเตอร์ไฟเก่า","มิเตอร์ไฟใหม่","ค่าไฟ","มิเตอร์น้ำเก่า","มิเตอร์น้ำใหม่","ค่าน้ำ","ที่จอดรถ","ค่าขยะ","รวม","เบอร์โทร"];
 
   return table.rows
     .filter(row => row.c && row.c[0] && row.c[0].v)
@@ -270,7 +270,7 @@ ${link}
         if (!s) { setSheet(null); setErr("ยังไม่มียอดห้องนี้\nกรุณาติดต่อเจ้าของหอพัก"); return; }
 
         // เช็คเบอร์โทร
-        const storedPhones = s["เบอร์"] || "";
+        const storedPhones = s["เบอร์โทร"] || "";
         if (!storedPhones) {
           setSheet(null); setErr("ยังไม่ได้ลงทะเบียนเบอร์\nกรุณาติดต่อเจ้าของหอพัก"); return;
         }
@@ -329,16 +329,51 @@ ${link}
               </div>
 
               <div style={{ marginBottom:8 }}>
-                {Object.entries(EXPENSE_LABELS).map(([key, { label, icon }]) => {
-                  const val = parseFloat(sheet[key]);
-                  if (!val || val === 0) return null;
-                  return (
-                    <div key={key} style={{ ...S.rowBorder, fontSize:13 }}>
-                      <span>{icon} {label}</span>
-                      <span style={{ fontWeight:600 }}>฿{val.toLocaleString()}</span>
+                {/* ค่าห้อง */}
+                {parseFloat(sheet["ค่าห้อง"]) > 0 && (
+                  <div style={{ ...S.rowBorder, fontSize:13 }}>
+                    <span>🏠 ค่าห้อง</span>
+                    <span style={{ fontWeight:600 }}>฿{parseFloat(sheet["ค่าห้อง"]).toLocaleString()}</span>
+                  </div>
+                )}
+                {/* ค่าไฟ + มิเตอร์ */}
+                {parseFloat(sheet["ค่าไฟ"]) > 0 && (
+                  <div style={{ borderBottom:`1px solid ${C.accentLight}`, paddingBottom:6, marginBottom:6 }}>
+                    <div style={{ display:"flex", justifyContent:"space-between", fontSize:13, marginBottom:3 }}>
+                      <span>⚡ ค่าไฟฟ้า</span>
+                      <span style={{ fontWeight:600 }}>฿{parseFloat(sheet["ค่าไฟ"]).toLocaleString()}</span>
                     </div>
-                  );
-                })}
+                    <div style={{ fontSize:11, color:"#888" }}>
+                      มิเตอร์ {parseFloat(sheet["มิเตอร์ไฟเก่า"]).toLocaleString()} → {parseFloat(sheet["มิเตอร์ไฟใหม่"]).toLocaleString()} = {(parseFloat(sheet["มิเตอร์ไฟใหม่"]) - parseFloat(sheet["มิเตอร์ไฟเก่า"])).toLocaleString()} หน่วย
+                    </div>
+                  </div>
+                )}
+                {/* ค่าน้ำ + มิเตอร์ */}
+                {parseFloat(sheet["ค่าน้ำ"]) > 0 && (
+                  <div style={{ borderBottom:`1px solid ${C.accentLight}`, paddingBottom:6, marginBottom:6 }}>
+                    <div style={{ display:"flex", justifyContent:"space-between", fontSize:13, marginBottom:3 }}>
+                      <span>💧 ค่าน้ำ</span>
+                      <span style={{ fontWeight:600 }}>฿{parseFloat(sheet["ค่าน้ำ"]).toLocaleString()}</span>
+                    </div>
+                    <div style={{ fontSize:11, color:"#888" }}>
+                      มิเตอร์ {parseFloat(sheet["มิเตอร์น้ำเก่า"]).toLocaleString()} → {parseFloat(sheet["มิเตอร์น้ำใหม่"]).toLocaleString()} = {(parseFloat(sheet["มิเตอร์น้ำใหม่"]) - parseFloat(sheet["มิเตอร์น้ำเก่า"])).toLocaleString()} หน่วย
+                    </div>
+                  </div>
+                )}
+                {/* ที่จอดรถ */}
+                {parseFloat(sheet["ที่จอดรถ"]) > 0 && (
+                  <div style={{ ...S.rowBorder, fontSize:13 }}>
+                    <span>🚗 ที่จอดรถ</span>
+                    <span style={{ fontWeight:600 }}>฿{parseFloat(sheet["ที่จอดรถ"]).toLocaleString()}</span>
+                  </div>
+                )}
+                {/* ค่าขยะ */}
+                {parseFloat(sheet["ค่าขยะ"]) > 0 && (
+                  <div style={{ ...S.rowBorder, fontSize:13 }}>
+                    <span>🗑️ ค่าขยะ</span>
+                    <span style={{ fontWeight:600 }}>฿{parseFloat(sheet["ค่าขยะ"]).toLocaleString()}</span>
+                  </div>
+                )}
                 <div style={{ ...S.totalRow, fontSize:15 }}>
                   <span>💰 รวม</span>
                   <span style={{ color:C.accent }}>฿{amt.toLocaleString()}</span>
