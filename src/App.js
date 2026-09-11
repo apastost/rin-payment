@@ -418,6 +418,24 @@ ${link}
                     </div>
                   </div>
                 )}
+
+                {/* ตารางอัตราค่าปรับ */}
+                <div style={{ background:"#FFF8E1", border:"0.5px solid #FFD54F", borderRadius:10, padding:"10px 12px", fontSize:12, marginBottom:6 }}>
+                  <div style={{ fontWeight:700, color:"#7B5800", marginBottom:6, fontSize:12 }}>📋 อัตราค่าปรับการชำระล่าช้า</div>
+                  {[
+                    { label:"วันที่ 1–5", rate:"ไม่มีค่าปรับ", color:"#2E7D32" },
+                    { label:"วันที่ 6–10", rate:"50 บาท / วัน", color:"#E65100" },
+                    { label:"วันที่ 11 เป็นต้นไป", rate:"100 บาท / วัน", color:"#C62828" },
+                  ].map((r, i) => (
+                    <div key={i} style={{ display:"flex", justifyContent:"space-between", padding:"3px 0", borderBottom: i < 2 ? "0.5px solid #FFD54F" : "none" }}>
+                      <span style={{ color:"#4A3820" }}>{r.label}</span>
+                      <span style={{ fontWeight:600, color:r.color }}>{r.rate}</span>
+                    </div>
+                  ))}
+                  <div style={{ marginTop:6, fontSize:11, color:"#7B5800" }}>
+                    * กำหนดชำระภายในวันที่ 5 เวลา 23:59 น. ของทุกเดือน
+                  </div>
+                </div>
                 <div style={{ ...S.totalRow, fontSize:15 }}>
                   <span>💰 รวมทั้งสิ้น</span>
                   <span style={{ color:C.accent }}>฿{(totalAmt||amt).toLocaleString()}</span>
