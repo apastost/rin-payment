@@ -1,5 +1,33 @@
 import { useState, useEffect, useRef } from "react";
 
+// ---- คำนวณค่าปรับชำระล่าช้า ----
+function calcLateFee() {
+  const now = new Date();
+  const day = now.getDate();
+  const hour = now.getHours();
+  const min = now.getMinutes();
+  const passedMidnight = hour * 60 + min >= 0; // ผ่านเที่ยงคืนแล้ว
+
+  // นับวันที่ผ่านไปหลังเส้นตาย (วันที่ 5 เวลา 23:59)
+  // ถ้าวันที่ <= 5 ไม่ปรับ
+  if (day <= 5) return { fee: 0, days1: 0, days2: 0 };
+
+  // วันที่ 6-10: ปรับ 50/วัน
+  // วันที่ 11+: ปรับ 100/วัน (จากวันที่ 11 เป็นต้นไป)
+  let days1 = 0; // วันที่ 6-10 (50 บาท/วัน)
+  let days2 = 0; // วันที่ 11+ (100 บาท/วัน)
+
+  if (day >= 6 && day <= 10) {
+    days1 = day - 5;
+  } else if (day > 10) {
+    days1 = 5; // วันที่ 6-10 = 5 วัน
+    days2 = day - 10;
+  }
+
+  const fee = (days1 * 50) + (days2 * 100);
+  return { fee, days1, days2 };
+}
+
 // ---- PromptPay QR Generator (EMV QR Standard - Verified) ----
 function crc16ccitt(str) {
   let crc = 0xFFFF;
@@ -275,7 +303,7 @@ ${link}
           setSheet(null); setErr("ยังไม่ได้ลงทะเบียนเบอร์\nกรุณาติดต่อเจ้าของหอพัก"); return;
         }
         const cleanInput = phone.replace(/\D/g, '');
-        const phoneList = storedPhones.split(',').map(p => p.replace(/\D/g, '').trim());
+        const phoneList = storedPhones.replace(/'/g, '').split(',').map(p => p.replace(/\D/g, '').trim());
         const matched = phoneList.some(p => p === cleanInput);
         if (!matched) { setSheet(null); setErr("เบอร์โทรไม่ถูกต้อง\nกรุณาตรวจสอบและลองใหม่"); return; }
 
@@ -284,6 +312,8 @@ ${link}
 
       const amt   = sheet?.["รวม"] ? parseFloat(sheet["รวม"]) : null;
       const month = sheet?.["เดือน"] || defMonth;
+      const { fee, days1, days2 } = calcLateFee();
+      const totalAmt = amt ? amt + fee : null;
 
       return (
         <div style={{ ...S.card, padding:0, overflow:"hidden", flex:1 }}>
@@ -374,9 +404,23 @@ ${link}
                     <span style={{ fontWeight:600 }}>฿{parseFloat(sheet["ค่าขยะ"]).toLocaleString()}</span>
                   </div>
                 )}
+                {/* ค่าปรับชำระล่าช้า */}
+                {fee > 0 && (
+                  <div style={{ borderBottom:`1px solid ${C.accentLight}`, paddingBottom:6, marginBottom:6 }}>
+                    <div style={{ display:"flex", justifyContent:"space-between", fontSize:13, marginBottom:3 }}>
+                      <span>⚠️ ค่าปรับชำระล่าช้า</span>
+                      <span style={{ fontWeight:600, color:"#C62828" }}>฿{fee.toLocaleString()}</span>
+                    </div>
+                    <div style={{ fontSize:11, color:"#C62828" }}>
+                      {days1 > 0 && `${days1} วัน × ฿50 = ฿${(days1*50).toLocaleString()}`}
+                      {days1 > 0 && days2 > 0 && "  +  "}
+                      {days2 > 0 && `${days2} วัน × ฿100 = ฿${(days2*100).toLocaleString()}`}
+                    </div>
+                  </div>
+                )}
                 <div style={{ ...S.totalRow, fontSize:15 }}>
-                  <span>💰 รวม</span>
-                  <span style={{ color:C.accent }}>฿{amt.toLocaleString()}</span>
+                  <span>💰 รวมทั้งสิ้น</span>
+                  <span style={{ color:C.accent }}>฿{(totalAmt||amt).toLocaleString()}</span>
                 </div>
               </div>
 
@@ -384,16 +428,16 @@ ${link}
               <div style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:10 }}>
                 <div style={{ fontSize:13, color:C.mid, fontWeight:600 }}>สแกน QR ชำระเงิน</div>
                 <div style={{ background:"#FFF", padding:8, borderRadius:14, boxShadow:"0 2px 16px rgba(0,0,0,0.12)", border:`2px solid ${C.accent}` }}>
-                  <QRCode phone={PROMPTPAY} amount={amt} size={160}/>
+                  <QRCode phone={PROMPTPAY} amount={totalAmt||amt} size={160}/>
                 </div>
                 <div style={{ background:C.accentLight, borderRadius:10, padding:"10px 12px", fontSize:12, color:C.mid, width:"100%", boxSizing:"border-box" }}>
                   <div style={{ display:"flex", justifyContent:"space-between", marginBottom:4 }}><span>PromptPay</span><span style={{fontWeight:700}}>{PROMPTPAY}</span></div>
                   <div style={{ display:"flex", justifyContent:"space-between", marginBottom:4 }}><span>ชื่อบัญชี</span><span style={{fontWeight:700}}>บุญยืน กำจัด</span></div>
-                  <div style={{ display:"flex", justifyContent:"space-between" }}><span>ยอดเงิน</span><span style={{fontWeight:800, color:C.accent, fontSize:14}}>฿{amt.toLocaleString()}</span></div>
+                  <div style={{ display:"flex", justifyContent:"space-between" }}><span>ยอดเงิน</span><span style={{fontWeight:800, color:C.accent, fontSize:14}}>฿{(totalAmt||amt).toLocaleString()}</span></div>
                 </div>
                 {/* หมายเหตุ QR สีแดง */}
                 <div style={{ background:"#FFEBEE", border:"0.5px solid #EF9595", borderRadius:10, padding:"8px 12px", fontSize:12, color:"#A32D2D", width:"100%", boxSizing:"border-box", lineHeight:1.6 }}>
-                  ❌ ถ้าสแกน QR ไม่ได้ ให้โอนผ่าน PromptPay เบอร์ <strong>{PROMPTPAY}</strong> แล้วใส่ยอด <strong>฿{amt.toLocaleString()}</strong>
+                  ❌ ถ้าสแกน QR ไม่ได้ ให้โอนผ่าน PromptPay เบอร์ <strong>{PROMPTPAY}</strong> แล้วใส่ยอด <strong>฿{(totalAmt||amt).toLocaleString()}</strong>
                 </div>
               </div>
             </div>
